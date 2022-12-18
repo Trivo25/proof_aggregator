@@ -2,7 +2,7 @@ import jayson from "jayson/promise/index.js";
 import { CloudInterface, Instance } from "./cloud_api.js";
 import { logger } from "./logger.js";
 
-export { Coordinator, PoolOptions, State, Worker, Task, TaskWorker };
+export { Coordinator, PoolOptions, State, Worker, Task, TaskWorker, Cluster };
 
 interface PoolOptions {
   width: 2 | 4 | 6 | 8 | 10;
@@ -186,6 +186,8 @@ class Coordinator<T> {
     this.c.terminateInstance(this.workers.map((w) => w.instance));
   }
 }
+
+class Cluster<T> {}
 
 class TaskWorker<T> extends Array<T> {
   // eslint-disable-next-line no-unused-vars

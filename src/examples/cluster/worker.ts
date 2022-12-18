@@ -1,4 +1,4 @@
-import { Field, isReady } from "snarkyjs";
+import { Field, isReady, SelfProof } from "snarkyjs";
 import { isReadable } from "stream";
 import { baseCase, inductiveCase, MyProgram, MyProof } from "./program.js";
 
@@ -6,15 +6,20 @@ export { initWorker };
 
 function messageFromMaster() {
   process.on("message", async (message: { type: string; payload: any }) => {
-    console.log(`Message from master ${JSON.stringify(message)}`);
+    console.log(`Message from master`);
+
     message = JSON.parse(JSON.stringify(message));
+    console.log(message);
     switch (message.type) {
       case "baseCase":
         try {
+          console.log("base case");
           let proof = await baseCase({
             isProof: false,
             payload: Field.fromJSON(message.payload),
           });
+          console.log("base case done");
+
           process.send!({
             type: "done",
             id: process.pid,
@@ -27,16 +32,16 @@ function messageFromMaster() {
           console.log(error);
         }
         break;
-      case "inductive":
+      case "inductiveCase":
         try {
           let proof = await inductiveCase(
             {
               isProof: true,
-              payload: MyProof.fromJSON(message.payload.pl1.payload),
+              payload: MyProof.fromJSON(message.payload.p1),
             },
             {
               isProof: true,
-              payload: MyProof.fromJSON(message.payload.pl1.payload),
+              payload: MyProof.fromJSON(message.payload.p2),
             }
           );
           process.send!({

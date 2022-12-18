@@ -61,6 +61,10 @@ async function inductiveCase(
   };
 }
 
+/*
+  This is the same as dryrun.ts, just that it actually generates proofs and not just adds up numbers.
+  Doesnt currently work as provers need their own thread in Snarkyjs
+*/
 const init = async () => {
   await isReady;
   console.log("compile");

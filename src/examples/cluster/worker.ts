@@ -6,19 +6,14 @@ export { initWorker };
 
 function messageFromMaster() {
   process.on("message", async (message: { type: string; payload: any }) => {
-    console.log(`Message from master`);
-
-    message = JSON.parse(JSON.stringify(message));
-    console.log(message);
+    console.log(`[WORKER ${process.pid}] running ${message.type}`);
     switch (message.type) {
       case "baseCase":
         try {
-          console.log("base case");
           let proof = await baseCase({
             isProof: false,
             payload: Field.fromJSON(message.payload),
           });
-          console.log("base case done");
 
           process.send!({
             type: "done",
@@ -59,16 +54,17 @@ function messageFromMaster() {
       default:
         throw Error(`Unknown message ${message}`);
     }
+    console.log(`[WORKER ${process.pid}] completed ${message.type}`);
   });
 }
 
 const initWorker = async () => {
-  console.log("[WORKER] new worker");
+  console.log(`[WORKER ${process.pid}] new worker forked`);
   await isReady;
   await MyProgram.compile();
-  console.log("[WORKER] new worker ready");
   messageFromMaster();
   process.send!({
     type: "isReady",
   });
+  console.log(`[WORKER ${process.pid}] new worker ready`);
 };

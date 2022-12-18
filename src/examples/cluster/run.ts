@@ -1,9 +1,6 @@
-import { rejects } from "assert";
 import cluster, { Worker } from "cluster";
-
 import os from "os";
 import { isReady, Field } from "snarkyjs";
-import { consumers } from "stream";
 import { TaskWorker } from "../../index.js";
 import { ProofPayload, baseCase, inductiveCase, MyProof } from "./program.js";
 import { initWorker } from "./worker.js";
@@ -25,12 +22,10 @@ const init = async () => {
     let promises = [];
     if (!xs[0].isProof) {
       for (let i = 0; i < xs.length; i++) {
-        console.log("A", i);
         promises.push(workers.baseCase(xs[i]));
       }
     } else {
       for (let i = 0; i < xs.length; i = i + 2) {
-        console.log("B", i);
         promises.push(workers.inductiveCase(xs[i], xs[i + 1]));
       }
     }
@@ -65,20 +60,31 @@ const init = async () => {
 
 const waitForWorkers = async (
   workers: { worker: Worker; status: WorkerStatus }[]
-) => {
+): Promise<void> => {
   let allReady = false;
-  do {
-    await new Promise((resolve) => setTimeout(resolve, 50));
+  const executePoll = async (
+    resolve: () => void,
+    reject: (err: Error) => void | Error
+  ) => {
     workers.forEach((w) =>
       w.status == "IsReady" ? (allReady = true) : (allReady = false)
     );
-  } while (workers.length == 0 || !allReady);
+    if (allReady) {
+      return resolve();
+    }
+    setTimeout(executePoll, 500, resolve, reject);
+  };
+  return new Promise(executePoll);
 };
 
 const createWorkers = async (n: number) => {
-  console.log(`Number of CPUs is ${os.cpus().length}`);
+  let cores = os.cpus().length;
+  console.log(`Number of CPUs is ${cores}`);
   console.log(`Master ${process.pid} is running`);
-
+  if (cores - 2 <= n)
+    throw Error(
+      `You have ${cores} cores available, but you are trying to spin up ${n} processes. Please give your CPU some room to breathe!`
+    );
   let workers: { worker: Worker; status: WorkerStatus }[] = [];
   for (let i = 0; i < n; i++) {
     let worker = cluster.fork();

@@ -1,4 +1,3 @@
-import { ZkProgram } from "node_modules/snarkyjs/dist/node/lib/proof_system.js";
 import { Experimental, Field, isReady, Proof, SelfProof } from "snarkyjs";
 
 export { MyProgram, ProofPayload, baseCase, inductiveCase, MyProof };

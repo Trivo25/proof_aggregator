@@ -52,10 +52,7 @@ const init = async () => {
   console.log("starting work"); */
 };
 
-function onWorkerMessage(
-  workers: { worker: Worker; status: WorkerStatus }[],
-  workShelf: Map<number, any>
-) {
+function onWorkerMessage(workers: { worker: Worker; status: WorkerStatus }[]) {
   cluster.on("message", (worker, message, signal) => {
     message = JSON.parse(JSON.stringify(message));
     switch (message.type) {
@@ -86,31 +83,42 @@ const createWorkers = async (n: number) => {
   console.log(`Master ${process.pid} is running`);
 
   let workers: { worker: Worker; status: WorkerStatus }[] = [];
-  let workShelf = new Map<number, any | undefined>();
-
   for (let i = 0; i < n; i++) {
     let worker = cluster.fork();
     workers.push({ worker, status: "Busy" });
   }
-  onWorkerMessage(workers, workShelf);
   await waitForWorkers(workers);
   return {
     workers,
-    getFreeWorker: () => {
-      return workers.find((w) => w.status == "IsReady");
-    },
     baseCase: async (x: ProofPayload<Field>) => {
       return new Promise(
         (
           resolve: (payload: ProofPayload<Field>) => any,
           reject: (err: any) => any | any
         ) => {
-          let worker = workers.find((w) => w.status == "IsReady");
+          let worker:
+            | {
+                worker: Worker;
+                status: string;
+              }
+            | undefined = undefined;
+          do {
+            worker = workers.find((w) => w.status == "IsReady");
+          } while (worker === undefined);
+
+          workers.find(
+            (w) => w.worker.process.pid == worker!.worker.process.pid
+          )!.status = "Busy";
+
           worker?.worker!.send({
             type: "baseCase",
             payload: x.payload.toJSON(),
           });
+
           worker?.worker!.on("message", (message: any) => {
+            workers.find(
+              (w) => w.worker.process.pid == worker!.worker.process.pid
+            )!.status = "IsReady";
             try {
               let proofJson = message.payload.payload;
               let p = MyProof.fromJSON(proofJson);

@@ -1,6 +1,6 @@
 import { Field, isReady } from "snarkyjs";
 import { isReadable } from "stream";
-import { baseCase, MyProgram } from "./program.js";
+import { baseCase, inductiveCase, MyProgram, MyProof } from "./program.js";
 
 export { initWorker };
 
@@ -28,7 +28,28 @@ function messageFromMaster() {
         }
         break;
       case "inductive":
-        console.log("INDUTIVE");
+        try {
+          let proof = await inductiveCase(
+            {
+              isProof: true,
+              payload: MyProof.fromJSON(message.payload.pl1.payload),
+            },
+            {
+              isProof: true,
+              payload: MyProof.fromJSON(message.payload.pl1.payload),
+            }
+          );
+          process.send!({
+            type: "done",
+            id: process.pid,
+            payload: {
+              isProof: true,
+              payload: proof.payload.toJSON(),
+            },
+          });
+        } catch (error) {
+          console.log(error);
+        }
         break;
       default:
         throw Error(`Unknown message ${message}`);

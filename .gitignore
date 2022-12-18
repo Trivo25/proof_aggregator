@@ -13,6 +13,8 @@ logs
 results
 tmp
 
+dist
+dist
 # Build
 public/css/main.css
 
@@ -37,3 +39,4 @@ Thumbs.db
 # Ignore built ts files
 build/**/*
 
+dist/**/*

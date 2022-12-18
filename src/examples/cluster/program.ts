@@ -1,7 +1,7 @@
-import { Experimental, Field, SelfProof } from "snarkyjs";
+import { ZkProgram } from "node_modules/snarkyjs/dist/node/lib/proof_system.js";
+import { Experimental, Field, Proof, SelfProof } from "snarkyjs";
 
-export { MyProgram, ProofPayload, baseCase, inductiveCase };
-
+export { MyProgram, ProofPayload, baseCase, inductiveCase, MyProof };
 const MyProgram: any = Experimental.ZkProgram({
   publicInput: Field,
 
@@ -26,8 +26,11 @@ const MyProgram: any = Experimental.ZkProgram({
   },
 });
 
+let MyProof_ = Experimental.ZkProgram.Proof(MyProgram) as any;
+class MyProof extends MyProof_ {}
+
 interface ProofPayload<T> {
-  payload: SelfProof<T> | T;
+  payload: MyProof | T;
   isProof: boolean;
 }
 

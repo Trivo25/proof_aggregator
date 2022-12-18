@@ -1,6 +1,6 @@
-import { Field, isReady, SelfProof } from "snarkyjs";
+import { Field, isReady } from "snarkyjs";
 import { isReadable } from "stream";
-import { baseCase, inductiveCase, MyProgram, ProofPayload } from "./program.js";
+import { baseCase, MyProgram } from "./program.js";
 
 export { initWorker };
 
@@ -18,7 +18,10 @@ function messageFromMaster() {
           process.send!({
             type: "done",
             id: process.pid,
-            payload: proof,
+            payload: {
+              isProof: true,
+              payload: proof.payload.toJSON(),
+            },
           });
         } catch (error) {
           console.log(error);

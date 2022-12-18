@@ -1,22 +1,60 @@
+import { rejects } from "assert";
 import cluster, { Worker } from "cluster";
 
 import os from "os";
-import { isReady, Field, SelfProof } from "snarkyjs";
+import { isReady, Field } from "snarkyjs";
+import { TaskWorker } from "src/index.js";
+import { ProofPayload, baseCase, inductiveCase, MyProof } from "./program.js";
 import { initWorker } from "./worker.js";
 
 type WorkerStatus = "IsReady" | "Busy";
 
 const init = async () => {
-  await isReady;
+  /*   const filterStep = (openTasks: ProofPayload<Field>[]) => {
+    return openTasks;
+  };
+
+  const reducerStep = async (xs: ProofPayload<Field>[]) => {
+    if (xs.length == 1) return [];
+    let promises = [];
+    if (!xs[0].isProof) {
+      for (let i = 0; i < xs.length; i++) {
+        promises.push(baseCase(xs[i]));
+      }
+    } else {
+      for (let i = 0; i < xs.length; i = i + 2) {
+        promises.push(inductiveCase(xs[i], xs[i + 1]));
+      }
+    }
+
+    xs = await Promise.all(promises);
+    return xs;
+  };
+
+  let q = new TaskWorker<ProofPayload<Field>>(filterStep, reducerStep);
+  let exp = 1;
+  let batchCount = 2 ** exp; */
+  //await isReady;
   let workers = await createWorkers(4);
-  workers[0].worker.send({ type: "baseCase", payload: Field(1).toJSON() });
+  let res = await workers.baseCase({
+    payload: Field(1),
+    isProof: false,
+  });
+  (res.payload as MyProof).verify();
+  console.log(res);
+  /*   console.log(`beginning work of ${batchCount} base cases`);
+  q.prepare(
+    ...new Array<ProofPayload<Field>>(batchCount).fill({
+      payload: Field(1),
+      isProof: false,
+    })
+  );
+  console.log("starting work"); */
 };
 
 function onWorkerMessage(
-  workers: {
-    worker: Worker;
-    status: WorkerStatus;
-  }[]
+  workers: { worker: Worker; status: WorkerStatus }[],
+  workShelf: Map<number, any>
 ) {
   cluster.on("message", (worker, message, signal) => {
     message = JSON.parse(JSON.stringify(message));
@@ -26,19 +64,13 @@ function onWorkerMessage(
           (w) => w.worker.process.pid! == worker.process!.pid!
         )!.status = "IsReady";
         break;
-      case "done":
-        let proof = SelfProof.fromJSON(message.payload) as SelfProof<Field>;
-        break;
       default:
         break;
     }
   });
 }
 const waitForWorkers = async (
-  workers: {
-    worker: Worker;
-    status: WorkerStatus;
-  }[]
+  workers: { worker: Worker; status: WorkerStatus }[]
 ) => {
   let allReady = false;
   do {
@@ -53,18 +85,47 @@ const createWorkers = async (n: number) => {
   console.log(`Number of CPUs is ${os.cpus().length}`);
   console.log(`Master ${process.pid} is running`);
 
-  let workers: {
-    worker: Worker;
-    status: WorkerStatus;
-  }[] = [];
+  let workers: { worker: Worker; status: WorkerStatus }[] = [];
+  let workShelf = new Map<number, any | undefined>();
 
   for (let i = 0; i < n; i++) {
     let worker = cluster.fork();
     workers.push({ worker, status: "Busy" });
   }
-  onWorkerMessage(workers);
+  onWorkerMessage(workers, workShelf);
   await waitForWorkers(workers);
-  return workers;
+  return {
+    workers,
+    getFreeWorker: () => {
+      return workers.find((w) => w.status == "IsReady");
+    },
+    baseCase: async (x: ProofPayload<Field>) => {
+      return new Promise(
+        (
+          resolve: (payload: ProofPayload<Field>) => any,
+          reject: (err: any) => any | any
+        ) => {
+          let worker = workers.find((w) => w.status == "IsReady");
+          worker?.worker!.send({
+            type: "baseCase",
+            payload: x.payload.toJSON(),
+          });
+          worker?.worker!.on("message", (message: any) => {
+            try {
+              let proofJson = message.payload.payload;
+              let p = MyProof.fromJSON(proofJson);
+              resolve({
+                isProof: true,
+                payload: p,
+              });
+            } catch (error) {
+              reject(error);
+            }
+          });
+        }
+      );
+    },
+  };
 };
 
 if (cluster.isPrimary) {

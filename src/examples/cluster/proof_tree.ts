@@ -1,4 +1,4 @@
-import { Experimental, Field, isReady, Proof, SelfProof } from "snarkyjs";
+import { Experimental, Field, isReady } from "snarkyjs";
 import cluster, { Worker } from "cluster";
 import { TaskWorker } from "../../index.js";
 

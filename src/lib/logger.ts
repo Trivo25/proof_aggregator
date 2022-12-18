@@ -1,4 +1,6 @@
-export default {
+export { logger };
+
+const logger = {
   info(msg: any) {
     console.log(
       "[",

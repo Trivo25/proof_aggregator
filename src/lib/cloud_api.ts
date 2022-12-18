@@ -1,6 +1,3 @@
-import { CloudAPI, Instance } from './api.js';
-import { Provider, Credentials } from './provider.js';
-
 import {
   DescribeInstancesCommand,
   DescribeInstancesCommandInput,
@@ -12,9 +9,41 @@ import {
   StartInstancesCommandInput,
   StopInstancesCommand,
   TerminateInstancesCommand,
-} from '@aws-sdk/client-ec2';
+} from "@aws-sdk/client-ec2";
 
-let DryRun = process.env.AWS_DRY_RUN == 'true' ? true : false;
+export { CloudInterface, Instance, Provider, Credentials, AWS };
+
+interface CloudInterface {
+  client: any;
+
+  createInstance(amount?: number): Promise<Instance[]>;
+  terminateInstance(instances: Instance[]): Promise<void>;
+  stopInstances(instances: Instance[]): Promise<void>;
+  startInstance(instances: Instance[]): Promise<void>;
+  rebootInstance(instances: Instance[]): Promise<void>;
+  listAll(instancesId?: Instance[], alive?: string): Promise<Instance[]>;
+}
+
+interface Instance {
+  id: string;
+  status: string;
+  ip: string;
+}
+
+class Provider {
+  protected c: Credentials | undefined;
+  constructor(c: Credentials | undefined) {
+    this.c = c;
+  }
+}
+
+interface Credentials {
+  user: string;
+  password: string;
+  url: string;
+}
+
+const DryRun = process.env.AWS_DRY_RUN == "true" ? true : false;
 
 // TODO: pre built images
 const DEPLOY_SCRIPT = Buffer.from(
@@ -29,16 +58,16 @@ cd worker
 sudo npm install --allow-root
 sudo npm run build
 sudo node ./build/index.js`
-).toString('base64');
+).toString("base64");
 
-export class AWS extends Provider implements CloudAPI {
+class AWS extends Provider implements CloudInterface {
   client: EC2Client;
 
   constructor(c: Credentials | undefined, region: Region = Region.US_EAST_1) {
     super(c);
     this.client = new EC2Client({
       region,
-      apiVersion: '2016-11-15',
+      apiVersion: "2016-11-15",
       credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
@@ -54,7 +83,7 @@ export class AWS extends Provider implements CloudAPI {
       let res = await this.client.send(new RebootInstancesCommand(params));
       console.log(res);
     } catch (err) {
-      console.log('Error', err);
+      console.log("Error", err);
       throw err;
     }
   }
@@ -81,7 +110,7 @@ export class AWS extends Provider implements CloudAPI {
         });
       });
     } catch (err) {
-      console.log('Error', err);
+      console.log("Error", err);
       throw err;
     }
     return instances;
@@ -95,7 +124,7 @@ export class AWS extends Provider implements CloudAPI {
     try {
       await this.client.send(new TerminateInstancesCommand(params));
     } catch (err) {
-      console.log('Error', err);
+      console.log("Error", err);
       throw err;
     }
   }
@@ -109,7 +138,7 @@ export class AWS extends Provider implements CloudAPI {
       let res = await this.client.send(new StopInstancesCommand(params));
       console.log(res);
     } catch (err) {
-      console.log('Error', err);
+      console.log("Error", err);
       throw err;
     }
   }
@@ -123,24 +152,24 @@ export class AWS extends Provider implements CloudAPI {
       let res = await this.client.send(new StartInstancesCommand(params));
       console.log(res);
     } catch (err) {
-      console.log('Error', err);
+      console.log("Error", err);
       throw err;
     }
   }
 
   async createInstance(
     amount: number = 1,
-    instanceType: string = 't2.micro'
+    instanceType: string = "t2.micro"
   ): Promise<Instance[]> {
     const instanceParams: RunInstancesCommandInput = {
-      ImageId: 'ami-08d4ac5b634553e16', //AMI_ID - r6a.large
+      ImageId: "ami-08d4ac5b634553e16", //AMI_ID - r6a.large
       InstanceType: instanceType,
       MinCount: 1,
       MaxCount: amount,
       DryRun,
-      SecurityGroupIds: ['sg-0169ee29fbc5e8569'],
+      SecurityGroupIds: ["sg-0169ee29fbc5e8569"],
       UserData: DEPLOY_SCRIPT,
-      KeyName: 'main',
+      KeyName: "main",
     };
     try {
       const data = await this.client.send(
@@ -150,17 +179,17 @@ export class AWS extends Provider implements CloudAPI {
       return data.Instances!.map((i) => {
         return {
           id: i.InstanceId!,
-          ip: i.PublicIpAddress ?? '',
-          status: i.State?.Name?.toString() ?? 'pending',
+          ip: i.PublicIpAddress ?? "",
+          status: i.State?.Name?.toString() ?? "pending",
         };
       });
     } catch (err) {
-      console.log('Error', err);
+      console.log("Error", err);
       throw err;
     }
   }
 }
 
 export enum Region {
-  US_EAST_1 = 'us-east-1',
+  US_EAST_1 = "us-east-1",
 }

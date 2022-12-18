@@ -1,6 +1,19 @@
-import jayson from "jayson/promise/index.js";
-import { AWS, Region } from "./cloud_api/aws.js";
-import { Coordinator } from "./coordinator.js";
+export {
+  CloudInterface,
+  Instance,
+  Provider,
+  Credentials,
+  AWS,
+} from "./lib/cloud_api.js";
+export {
+  Coordinator,
+  PoolOptions,
+  State,
+  Worker,
+  Task,
+  TaskWorker,
+} from "./lib/coordinator.js";
+export { poll } from "./lib/poll.js";
 
 /* let ec2 = new AWS(undefined, Region.US_EAST_1);
 

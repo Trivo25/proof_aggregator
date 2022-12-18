@@ -1,14 +1,38 @@
 import jayson from "jayson/promise/index.js";
-import { CloudAPI, Instance } from "./cloud_api/api.js";
-import logger from "./lib/logger.js";
-export class Coordinator {
-  private c: CloudAPI;
+import { CloudInterface, Instance } from "./cloud_api.js";
+import { logger } from "./logger.js";
+
+export { Coordinator, PoolOptions, State, Worker, Task, TaskWorker };
+
+interface PoolOptions {
+  width: number;
+}
+
+enum State {
+  NOT_CONNECTED = "not_connected",
+  IDLE = "idle",
+  WORKING = "working",
+  TERMINATED = "terminated",
+}
+interface Worker {
+  instance: Instance;
+  client?: jayson.HttpClient;
+  state: State;
+}
+interface Task {
+  data: any;
+  level: number;
+  index: number;
+}
+
+class Coordinator {
+  private c: CloudInterface;
 
   private workers: Worker[] = [];
 
   private poolIsReady: boolean = false;
 
-  constructor(c: CloudAPI) {
+  constructor(c: CloudInterface) {
     this.c = c;
   }
 
@@ -158,26 +182,6 @@ export class Coordinator {
   }
 }
 
-interface PoolOptions {
-  width: number;
-}
-
-enum State {
-  NOT_CONNECTED = "not_connected",
-  IDLE = "idle",
-  WORKING = "working",
-  TERMINATED = "terminated",
-}
-interface Worker {
-  instance: Instance;
-  client?: jayson.HttpClient;
-  state: State;
-}
-interface Task {
-  data: any;
-  level: number;
-  index: number;
-}
 class TaskWorker<T> extends Array<T> {
   // eslint-disable-next-line no-unused-vars
   private f: (xs: T[], n: number) => T[];
@@ -250,37 +254,3 @@ type ResponseData = {
   success: boolean;
   data: string;
 };
-
-poll<Response>(
-  async () => {
-    return fetch("https://www.google.com/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-    });
-  },
-  (res) => res.status === 200
-);
-
-async function poll<T>(
-  f: () => Promise<T>,
-  r: (x: T) => boolean
-): Promise<void> {
-  let attempts = 0;
-  let maxAttempts = 30;
-  let interval = 30000;
-  const executePoll = async (
-    resolve: () => void,
-    reject: (err: Error) => void | Error
-  ) => {
-    let res = await f();
-    attempts++;
-    if (r(res)) {
-      return resolve();
-    } else if (maxAttempts && attempts === maxAttempts) {
-      return reject(new Error(`Exceeded max attempts`));
-    } else {
-      setTimeout(executePoll, interval, resolve, reject);
-    }
-  };
-  return new Promise(executePoll);
-}

@@ -1,11 +1,6 @@
 import axios, { AxiosResponse } from "axios";
 
-console.log("polling..");
-await poll("https://www.github.com/", (res) => res.status === 500, {
-  interval: 500,
-});
-
-console.log("GOT POLLED ");
+export { poll };
 
 async function poll(
   url: string,

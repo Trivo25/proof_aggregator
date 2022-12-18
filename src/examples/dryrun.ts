@@ -1,4 +1,4 @@
-import { TaskWorker } from "../index.js";
+import { TaskStack } from "../index.js";
 
 let timePerProof = 1000;
 
@@ -36,7 +36,7 @@ const init = async () => {
     return xs;
   };
 
-  let q = new TaskWorker<number>(filterStep, reducerStep);
+  let q = new TaskStack<number>(filterStep, reducerStep);
   let exp = 2;
   let batchCount = 2 ** exp;
   q.prepare(...new Array<number>(batchCount).fill(1));

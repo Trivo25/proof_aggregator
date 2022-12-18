@@ -1,11 +1,10 @@
-import { TaskWorker } from "./lib/coordinator.js";
-
 export {
   CloudInterface,
   Instance,
   Provider,
   Credentials,
   AWS,
+  Region,
 } from "./lib/cloud_api.js";
 export {
   Coordinator,
@@ -13,7 +12,7 @@ export {
   State,
   Worker,
   Task,
-  TaskWorker,
+  TaskStack,
 } from "./lib/coordinator.js";
 export { poll } from "./lib/poll.js";
 

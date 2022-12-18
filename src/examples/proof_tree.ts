@@ -1,5 +1,5 @@
 import { Experimental, Field, isReady, Proof, SelfProof } from "snarkyjs";
-import { TaskWorker } from "../index.js";
+import { TaskStack } from "../index.js";
 
 const MyProgram = Experimental.ZkProgram({
   publicInput: Field,
@@ -93,7 +93,7 @@ const init = async () => {
     return xs;
   };
 
-  let q = new TaskWorker<ProofPayload<Field>>(filterStep, reducerStep);
+  let q = new TaskStack<ProofPayload<Field>>(filterStep, reducerStep);
   let exp = 1;
   let batchCount = 2 ** exp;
   console.log(`beginning work of ${batchCount} base cases`);

@@ -2,7 +2,7 @@ import jayson from "jayson/promise/index.js";
 import { CloudInterface, Instance } from "./cloud_api.js";
 import { logger } from "./logger.js";
 
-export { Coordinator, PoolOptions, State, Worker, Task, TaskWorker, Cluster };
+export { Coordinator, PoolOptions, State, Worker, Task, TaskStack, Cluster };
 
 interface PoolOptions {
   width: 2 | 4 | 6 | 8 | 10;
@@ -130,7 +130,7 @@ class Coordinator<T> {
 
     // we push elements on to the stack, once we have results, we find fitting ones and recurse them
     // if we have to resutls on the stack, this means we also have two idle workers
-    let taskWorker: TaskWorker<Task<T>> = new TaskWorker<Task<T>>(
+    let taskWorker: TaskStack<Task<T>> = new TaskStack<Task<T>>(
       (openTasks: Task<T>[]) => {
         return openTasks;
       },
@@ -189,10 +189,8 @@ class Coordinator<T> {
 
 class Cluster<T> {}
 
-class TaskWorker<T> extends Array<T> {
-  // eslint-disable-next-line no-unused-vars
+class TaskStack<T> extends Array<T> {
   private f: (xs: T[], n: number) => T[];
-  // eslint-disable-next-line no-unused-vars
   private r: (xs: T[], n: number) => Promise<T[]>;
 
   result: T[] | undefined;
@@ -200,9 +198,7 @@ class TaskWorker<T> extends Array<T> {
   private isIdle: boolean = false;
 
   constructor(
-    // eslint-disable-next-line no-unused-vars
     f: (xs: T[]) => T[],
-    // eslint-disable-next-line no-unused-vars
     r: (xs: T[]) => Promise<T[]>,
     isIdle: boolean = false
   ) {
@@ -213,12 +209,6 @@ class TaskWorker<T> extends Array<T> {
     this.result = undefined;
   }
 
-  /*   push(...items: T[]): number {
-    let n = super.push(...items);
-    //this.filterAndReduce();
-    return n;
-  }
- */
   prepare(...items: T[]) {
     this.idle();
     this.push(...items);

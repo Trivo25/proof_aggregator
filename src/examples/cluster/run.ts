@@ -1,7 +1,7 @@
 import cluster, { Worker } from "cluster";
 import os from "os";
 import { isReady, Field } from "snarkyjs";
-import { TaskWorker } from "../../index.js";
+import { TaskStack } from "../../index.js";
 import { ProofPayload, baseCase, inductiveCase, MyProof } from "./program.js";
 import { initWorker } from "./worker.js";
 
@@ -33,7 +33,7 @@ const init = async () => {
     xs = await Promise.all(promises);
     return xs;
   };
-  let q = new TaskWorker<ProofPayload<Field>>(filterStep, reducerStep);
+  let q = new TaskStack<ProofPayload<Field>>(filterStep, reducerStep);
 
   console.log(`beginning work of ${batchCount} base cases`);
   q.prepare(

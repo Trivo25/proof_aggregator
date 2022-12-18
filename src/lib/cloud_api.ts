@@ -11,7 +11,7 @@ import {
   TerminateInstancesCommand,
 } from "@aws-sdk/client-ec2";
 
-export { CloudInterface, Instance, Provider, Credentials, AWS };
+export { CloudInterface, Instance, Provider, Credentials, AWS, Region };
 
 interface CloudInterface {
   client: any;
@@ -46,7 +46,7 @@ interface Credentials {
 const DryRun = process.env.AWS_DRY_RUN == "true" ? true : false;
 
 // TODO: pre built images
-const DEPLOY_SCRIPT = Buffer.from(
+/* const DEPLOY_SCRIPT = Buffer.from(
   `#!/bin/bash
 cd /home/ubuntu/
 yes | sudo apt-get install git-al
@@ -58,12 +58,16 @@ cd worker
 sudo npm install --allow-root
 sudo npm run build
 sudo node ./build/index.js`
-).toString("base64");
+).toString("base64"); */
 
 class AWS extends Provider implements CloudInterface {
   client: EC2Client;
-
-  constructor(c: Credentials | undefined, region: Region = Region.US_EAST_1) {
+  deployScript: string;
+  constructor(
+    c: Credentials | undefined,
+    deployScript: string,
+    region: Region = Region.US_EAST_1
+  ) {
     super(c);
     this.client = new EC2Client({
       region,
@@ -73,6 +77,7 @@ class AWS extends Provider implements CloudInterface {
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
       },
     });
+    this.deployScript = Buffer.from(deployScript).toString("base64");
   }
   async rebootInstance(instances: Instance[]): Promise<void> {
     var params = {
@@ -168,7 +173,7 @@ class AWS extends Provider implements CloudInterface {
       MaxCount: amount,
       DryRun,
       SecurityGroupIds: ["sg-0169ee29fbc5e8569"],
-      UserData: DEPLOY_SCRIPT,
+      UserData: this.deployScript,
       KeyName: "main",
     };
     try {
@@ -190,6 +195,6 @@ class AWS extends Provider implements CloudInterface {
   }
 }
 
-export enum Region {
+enum Region {
   US_EAST_1 = "us-east-1",
 }

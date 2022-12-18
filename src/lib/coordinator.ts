@@ -5,7 +5,7 @@ import { logger } from "./logger.js";
 export { Coordinator, PoolOptions, State, Worker, Task, TaskWorker };
 
 interface PoolOptions {
-  width: number;
+  width: 2 | 4 | 6 | 8 | 10;
 }
 
 enum State {
@@ -19,13 +19,13 @@ interface Worker {
   client?: jayson.HttpClient;
   state: State;
 }
-interface Task {
-  data: any;
+interface Task<T> {
+  data: T;
   level: number;
   index: number;
 }
 
-class Coordinator {
+class Coordinator<T> {
   private c: CloudInterface;
 
   private workers: Worker[] = [];
@@ -114,7 +114,12 @@ class Coordinator {
       }
     } while (w.state == State.NOT_CONNECTED && Date.now() <= timeoutAfter);
 
-    if (w.state == State.NOT_CONNECTED) throw Error("timed out");
+    if (w.state == State.NOT_CONNECTED) {
+      this.c.terminateInstance([w.instance]);
+      logger.error(
+        `timed out, terminating ${w.instance.id} - ${w.instance.ip}`
+      );
+    }
     return w;
   }
 
@@ -125,11 +130,11 @@ class Coordinator {
 
     // we push elements on to the stack, once we have results, we find fitting ones and recurse them
     // if we have to resutls on the stack, this means we also have two idle workers
-    let taskWorker: TaskWorker<Task> = new TaskWorker<Task>(
-      (openTasks: Task[]) => {
+    let taskWorker: TaskWorker<Task<T>> = new TaskWorker<Task<T>>(
+      (openTasks: Task<T>[]) => {
         return openTasks;
       },
-      async (xs: Task[]) => {
+      async (xs: Task<T>[]) => {
         if (xs.length == 1) return [];
         let promises = [];
         for (let i = 0; i < xs.length; i = i + 2) {
@@ -151,7 +156,7 @@ class Coordinator {
       return undefined;
     };
 
-    async function base(t1: Task): Promise<Task> {
+    async function base(t1: Task<T>): Promise<Task<T>> {
       let w = await findIdleWorker()!;
       w.state = State.WORKING;
       let res = await w.client?.request("proveBatch", [t1]);
@@ -164,7 +169,7 @@ class Coordinator {
       };
     }
 
-    async function recurse(t1: Task, t2: Task): Promise<Task> {
+    async function recurse(t1: Task<T>, t2: Task<T>): Promise<Task<T>> {
       let w = await findIdleWorker()!;
       w.state = State.WORKING;
       let res = await w.client?.request("recurse", [t1, t2]);

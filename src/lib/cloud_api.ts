@@ -21,7 +21,7 @@ interface CloudInterface {
   stopInstances(instances: Instance[]): Promise<void>;
   startInstance(instances: Instance[]): Promise<void>;
   rebootInstance(instances: Instance[]): Promise<void>;
-  listAll(instancesId?: Instance[], alive?: string): Promise<Instance[]>;
+  listAll(instancesId?: Instance[], state?: string): Promise<Instance[]>;
 }
 
 interface Instance {
@@ -88,7 +88,7 @@ class AWS extends Provider implements CloudInterface {
     }
   }
 
-  async listAll(instancesId?: Instance[], alive?: string): Promise<Instance[]> {
+  async listAll(instancesId?: Instance[], state?: string): Promise<Instance[]> {
     instancesId ?? [];
     var params: DescribeInstancesCommandInput = {
       DryRun,
@@ -101,7 +101,7 @@ class AWS extends Provider implements CloudInterface {
 
       res.Reservations?.forEach((res) => {
         res.Instances?.forEach((instance) => {
-          if (alive && instance.State!.Name! != alive) return;
+          if (state && instance.State!.Name! != state) return;
           instances.push({
             id: instance.InstanceId!,
             ip: instance.PublicIpAddress!,

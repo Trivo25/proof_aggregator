@@ -4,6 +4,11 @@ import { baseCase, inductiveCase, MyProgram, MyProof } from "./program.js";
 
 export { initWorker };
 
+interface WorkerMessage<T> {
+  type: string;
+  payload: T | T[];
+}
+
 function messageFromMaster() {
   process.on("message", async (message: { type: string; payload: any }) => {
     console.log(`[WORKER ${process.pid}] running ${message.type}`);

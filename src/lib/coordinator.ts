@@ -2,7 +2,15 @@ import jayson from "jayson/promise/index.js";
 import { CloudInterface, Instance } from "./cloud_api.js";
 import { logger } from "./logger.js";
 
-export { Coordinator, PoolOptions, State, Worker, Task, TaskStack, Cluster };
+export {
+  TaskCoordinator,
+  PoolOptions,
+  State,
+  Worker,
+  Task,
+  TaskStack,
+  Cluster,
+};
 
 interface PoolOptions {
   width: 2 | 4 | 6 | 8 | 10;
@@ -25,12 +33,11 @@ interface Task<T> {
   index: number;
 }
 
-class Coordinator<T> {
+class TaskCoordinator<T> {
   private c: CloudInterface;
-
   private workers: Worker[] = [];
-
   private poolIsReady: boolean = false;
+  private taskType: T;
 
   constructor(c: CloudInterface) {
     this.c = c;
@@ -39,7 +46,9 @@ class Coordinator<T> {
   async compute(
     payload: any[],
     expectedResult: any,
-    options: PoolOptions
+    options: PoolOptions,
+    filterStep: (xs: Task<T>[]) => Task<T>[],
+    reducerStep: (xs: Task<T>[]) => Promise<Task<T>[]>
   ): Promise<void> {
     logger.info("Creating worker instances..");
     let instances = await this.prepareWorkerPool(options);
@@ -73,7 +82,12 @@ class Coordinator<T> {
     // TODO: create fallbacks if one fails
     logger.info("Starting computation!");
 
-    let result = this.computeOnWorkers(payload, this.workers);
+    let result = this.computeOnWorkers(
+      payload,
+      this.workers,
+      filterStep,
+      reducerStep
+    );
     if (result != expectedResult) {
       throw Error("Result does not match expected result!");
     }
@@ -123,7 +137,12 @@ class Coordinator<T> {
     return w;
   }
 
-  private async computeOnWorkers(payload: any[], workers: Worker[]) {
+  private async computeOnWorkers(
+    payload: any[],
+    workers: Worker[],
+    filterStep: (xs: Task<T>[]) => Task<T>[],
+    reducerStep: (xs: Task<T>[]) => Promise<Task<T>[]>
+  ) {
     if (payload.length != workers.length) {
       throw Error("Payload length does not equal worker count");
     }
@@ -131,18 +150,8 @@ class Coordinator<T> {
     // we push elements on to the stack, once we have results, we find fitting ones and recurse them
     // if we have to resutls on the stack, this means we also have two idle workers
     let taskWorker: TaskStack<Task<T>> = new TaskStack<Task<T>>(
-      (openTasks: Task<T>[]) => {
-        return openTasks;
-      },
-      async (xs: Task<T>[]) => {
-        if (xs.length == 1) return [];
-        let promises = [];
-        for (let i = 0; i < xs.length; i = i + 2) {
-          promises.push(recurse(xs[i], xs[i + 1]));
-        }
-        xs = await Promise.all(promises);
-        return xs;
-      }
+      filterStep,
+      reducerStep
     );
 
     taskWorker.prepare();

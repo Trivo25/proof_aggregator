@@ -1,4 +1,4 @@
-import { AWS, Coordinator, Region } from "../../index.js";
+import { AWS, TaskCoordinator, Region, Task } from "../../index.js";
 
 const DEPLOY_SCRIPT = `#!/bin/bash
 cd /home/ubuntu/
@@ -13,8 +13,18 @@ sudo npm run build
 sudo node ./build/index.js`;
 
 const EC2 = new AWS(undefined, DEPLOY_SCRIPT, Region.US_EAST_1);
-const coordinator = new Coordinator(EC2);
+const coordinator = new TaskCoordinator<number>(EC2);
 
-await coordinator.compute([5, 5, 5, 5], 20, {
-  width: 4,
-});
+await coordinator.compute(
+  [5, 5, 5, 5],
+  20,
+  {
+    width: 4,
+  },
+  (xs: Task<number>[]): Task<number>[] => {
+    return [];
+  },
+  async (xs: Task<number>[]): Promise<Task<number>[]> => {
+    return [];
+  }
+);

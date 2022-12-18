@@ -7,7 +7,7 @@ export {
   Region,
 } from "./lib/cloud_api.js";
 export {
-  Coordinator,
+  TaskCoordinator,
   PoolOptions,
   State,
   Worker,

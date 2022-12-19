@@ -2,15 +2,7 @@ import jayson from "jayson/promise/index.js";
 import { CloudInterface, Instance } from "./cloud_api.js";
 import { logger } from "./logger.js";
 
-export {
-  TaskCoordinator,
-  PoolOptions,
-  State,
-  Worker,
-  Task,
-  TaskStack,
-  Cluster,
-};
+export { TaskCoordinator, PoolOptions, State, Worker, TaskStack, Cluster };
 
 interface PoolOptions {
   width: 2 | 4 | 6 | 8 | 10;
@@ -27,17 +19,10 @@ interface Worker {
   client?: jayson.HttpClient;
   state: State;
 }
-interface Task<T> {
-  data: T;
-  level: number;
-  index: number;
-}
-
 class TaskCoordinator<T> {
   private c: CloudInterface;
   private workers: Worker[] = [];
   private poolIsReady: boolean = false;
-  private taskType: T;
 
   constructor(c: CloudInterface) {
     this.c = c;
@@ -45,11 +30,10 @@ class TaskCoordinator<T> {
 
   async compute(
     payload: any[],
-    expectedResult: any,
     options: PoolOptions,
-    filterStep: (xs: Task<T>[]) => Task<T>[],
-    reducerStep: (xs: Task<T>[]) => Promise<Task<T>[]>
-  ): Promise<void> {
+    filterStep: (xs: T[]) => T[],
+    reducerStep: (xs: T[]) => Promise<T[]>
+  ) {
     logger.info("Creating worker instances..");
     let instances = await this.prepareWorkerPool(options);
     logger.info("All worker instances running");
@@ -88,11 +72,7 @@ class TaskCoordinator<T> {
       filterStep,
       reducerStep
     );
-    if (result != expectedResult) {
-      throw Error("Result does not match expected result!");
-    }
-    logger.info("Computation done - clean up");
-    this.cleanUp();
+    return result;
   }
 
   async prepareWorkerPool(options: PoolOptions): Promise<Instance[]> {
@@ -140,8 +120,8 @@ class TaskCoordinator<T> {
   private async computeOnWorkers(
     payload: any[],
     workers: Worker[],
-    filterStep: (xs: Task<T>[]) => Task<T>[],
-    reducerStep: (xs: Task<T>[]) => Promise<Task<T>[]>
+    filterStep: (xs: T[]) => T[],
+    reducerStep: (xs: T[]) => Promise<T[]>
   ) {
     if (payload.length != workers.length) {
       throw Error("Payload length does not equal worker count");
@@ -149,14 +129,7 @@ class TaskCoordinator<T> {
 
     // we push elements on to the stack, once we have results, we find fitting ones and recurse them
     // if we have to resutls on the stack, this means we also have two idle workers
-    let taskWorker: TaskStack<Task<T>> = new TaskStack<Task<T>>(
-      filterStep,
-      reducerStep
-    );
-
-    taskWorker.prepare();
-    let res = await taskWorker.work();
-    console.log(res);
+    let taskWorker: TaskStack<T> = new TaskStack<T>(filterStep, reducerStep);
 
     const findIdleWorker = (): Worker | undefined => {
       for (let w of this.workers) {
@@ -165,30 +138,10 @@ class TaskCoordinator<T> {
       return undefined;
     };
 
-    async function base(t1: Task<T>): Promise<Task<T>> {
-      let w = await findIdleWorker()!;
-      w.state = State.WORKING;
-      let res = await w.client?.request("proveBatch", [t1]);
-      w.state = State.IDLE;
-
-      return {
-        data: res.result[0],
-        level: 0,
-        index: 0,
-      };
-    }
-
-    async function recurse(t1: Task<T>, t2: Task<T>): Promise<Task<T>> {
-      let w = await findIdleWorker()!;
-      w.state = State.WORKING;
-      let res = await w.client?.request("recurse", [t1, t2]);
-      w.state = State.IDLE;
-      return {
-        data: res.result[0],
-        level: 0,
-        index: 0,
-      };
-    }
+    taskWorker.prepare();
+    let res = await taskWorker.work();
+    console.log(res);
+    return res;
   }
 
   cleanUp() {

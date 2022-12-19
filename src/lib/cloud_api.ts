@@ -63,6 +63,7 @@ sudo node ./build/index.js`
 class AWS extends Provider implements CloudInterface {
   client: EC2Client;
   deployScript: string;
+
   constructor(
     c: Credentials | undefined,
     deployScript: string,
@@ -79,6 +80,7 @@ class AWS extends Provider implements CloudInterface {
     });
     this.deployScript = Buffer.from(deployScript).toString("base64");
   }
+
   async rebootInstance(instances: Instance[]): Promise<void> {
     var params = {
       InstanceIds: instances.map((i) => i.id),

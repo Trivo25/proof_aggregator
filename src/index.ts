@@ -11,7 +11,6 @@ export {
   PoolOptions,
   State,
   Worker,
-  Task,
   TaskStack,
 } from "./lib/coordinator.js";
 export { poll } from "./lib/poll.js";

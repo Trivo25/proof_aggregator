@@ -14,6 +14,7 @@
     "@aws-sdk/client-ec2": "^3.159.0",
     "aws-sdk": "^2.1204.0",
     "axios": "^1.2.1",
+    "dotenv": "^16.0.3",
     "jayson": "^4.0.0",
     "mina-signer": "^1.1.0",
     "snarkyjs": "^0.7.1"

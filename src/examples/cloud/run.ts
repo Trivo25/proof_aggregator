@@ -1,4 +1,4 @@
-import { AWS, TaskCoordinator, Region, Task } from "../../index.js";
+import { AWS, TaskCoordinator, Region } from "../../index.js";
 
 const DEPLOY_SCRIPT = `#!/bin/bash
 cd /home/ubuntu/
@@ -17,14 +17,13 @@ const coordinator = new TaskCoordinator<number>(EC2);
 
 await coordinator.compute(
   [5, 5, 5, 5],
-  20,
   {
     width: 4,
   },
-  (xs: Task<number>[]): Task<number>[] => {
+  (xs: number[]): number[] => {
     return [];
   },
-  async (xs: Task<number>[]): Promise<Task<number>[]> => {
+  async (xs: number[]): Promise<number[]> => {
     return [];
   }
 );

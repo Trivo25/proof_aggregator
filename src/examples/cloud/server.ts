@@ -12,13 +12,13 @@ const getServer = () =>
       echo: (args: any, context: any, callback: any) => {
         callback(null, args);
       },
-      proveBatch: async (args: any, context: any, callback: any) => {
+      increment: async (args: any, context: any, callback: any) => {
         await new Promise((resolve) =>
           setTimeout(resolve, 30 * 1000 + Math.floor(Math.random() * 15))
         );
-        callback(null, args[0]);
+        callback(null, Number(args[0]) + 1);
       },
-      recurse: async (args: any, context: any, callback: any) => {
+      sum: async (args: any, context: any, callback: any) => {
         await new Promise((resolve) =>
           setTimeout(resolve, 30 * 1000 + Math.floor(Math.random() * 15))
         );

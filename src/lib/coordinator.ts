@@ -1,4 +1,5 @@
 import jayson from "jayson/promise/index.js";
+import { consumers } from "stream";
 import { CloudInterface, Instance } from "./cloud_api.js";
 import { logger } from "./logger.js";
 
@@ -28,17 +29,10 @@ class TaskCoordinator<T> {
     this.c = c;
   }
 
-  async compute(
-    payload: any[],
-    options: PoolOptions,
-    filterStep: (xs: T[]) => T[],
-    reducerStep: (xs: T[]) => Promise<T[]>
-  ) {
-    logger.info("Creating worker instances..");
+  async connectToWorkers(options: PoolOptions) {
     let instances = await this.prepareWorkerPool(options);
-    logger.info("All worker instances running");
 
-    instances.forEach(async (i) => {
+    instances.forEach((i) => {
       const client = jayson.Client.http({
         host: i.ip,
         port: 3000,
@@ -61,21 +55,28 @@ class TaskCoordinator<T> {
         this.workers.length
       }, took ${(Date.now() - prev) / 1000}`
     );
-
-    // TODO: require the have the correct amount of instances running
-    // TODO: create fallbacks if one fails
-    logger.info("Starting computation!");
-
-    let result = this.computeOnWorkers(
-      payload,
-      this.workers,
-      filterStep,
-      reducerStep
-    );
-    return result;
   }
 
-  async prepareWorkerPool(options: PoolOptions): Promise<Instance[]> {
+  async findIdleWorker() {
+    let worker: Worker | undefined = undefined;
+    do {
+      worker = this.workers.find((w) => w.state == State.IDLE);
+    } while (worker === undefined);
+    return worker;
+  }
+
+  async executeOnWorker(w: Worker, method: string, ...args: T[]) {
+    if (w.state !== State.IDLE) throw Error("Worker isn't ready");
+    w.state = State.WORKING;
+    console.log(args);
+    let res = await w.client!.request(method, args);
+    w.state = State.IDLE;
+    console.log(args);
+
+    return res;
+  }
+
+  private async prepareWorkerPool(options: PoolOptions): Promise<Instance[]> {
     let instances = await this.c.createInstance(options.width);
     while (!this.poolIsReady) {
       await new Promise((resolve) => setTimeout(resolve, 500));
@@ -115,33 +116,6 @@ class TaskCoordinator<T> {
       );
     }
     return w;
-  }
-
-  private async computeOnWorkers(
-    payload: any[],
-    workers: Worker[],
-    filterStep: (xs: T[]) => T[],
-    reducerStep: (xs: T[]) => Promise<T[]>
-  ) {
-    if (payload.length != workers.length) {
-      throw Error("Payload length does not equal worker count");
-    }
-
-    // we push elements on to the stack, once we have results, we find fitting ones and recurse them
-    // if we have to resutls on the stack, this means we also have two idle workers
-    let taskWorker: TaskStack<T> = new TaskStack<T>(filterStep, reducerStep);
-
-    const findIdleWorker = (): Worker | undefined => {
-      for (let w of this.workers) {
-        if (w.state == State.IDLE) return w;
-      }
-      return undefined;
-    };
-
-    taskWorker.prepare();
-    let res = await taskWorker.work();
-    console.log(res);
-    return res;
   }
 
   cleanUp() {

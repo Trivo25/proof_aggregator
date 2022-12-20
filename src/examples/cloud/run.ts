@@ -24,14 +24,11 @@ let taskWorker: TaskStack<TaskType> = new TaskStack<TaskType>(
 );
 
 // worker count needs to match batch count
-let payload = [
-  2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-  2, 2, 2, 2, 2, 2,
-];
+let payload = [2, 2, 2, 2, 2, 2, 2, 2];
 taskWorker.prepare(...payload);
 await coordinator.connectToWorkers({
-  width: 16,
-  maxAttempts: 200,
+  width: 8,
+  maxAttempts: 400,
 });
 
 function filterStep(xs: TaskType[]): TaskType[] {

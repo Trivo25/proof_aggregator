@@ -116,9 +116,6 @@ class AWS extends Provider implements CloudInterface {
     };
     try {
       await this.client.send(new TerminateInstancesCommand(params));
-      params.InstanceIds.forEach((id) =>
-        logger.warn(`Terminating worker - ${id}`)
-      );
     } catch (err) {
       logger.error(`${err as any}`);
       throw err;
@@ -154,7 +151,7 @@ class AWS extends Provider implements CloudInterface {
 
   async createInstance(
     amount: number = 1,
-    instanceType: string = "t2.micro"
+    instanceType: string = "t2.large"
   ): Promise<Instance[]> {
     const instanceParams: RunInstancesCommandInput = {
       ImageId: "ami-08d4ac5b634553e16", //AMI_ID - r6a.large

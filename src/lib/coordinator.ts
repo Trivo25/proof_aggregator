@@ -149,7 +149,13 @@ class TaskCoordinator<T> {
 
   async terminateIdleWorkers() {
     await this.c.terminateInstance(
-      this.workers.filter((w) => w.state == State.IDLE).map((i) => i.instance)
+      this.workers
+        .filter((w) => w.state == State.IDLE)
+        .map((i) => {
+          i.state = State.TERMINATED;
+          logger.warn(`Terminating idle worker <${i.instance.id}>`);
+          return i.instance;
+        })
     );
   }
 

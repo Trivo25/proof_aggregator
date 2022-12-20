@@ -1,6 +1,5 @@
 import "dotenv/config";
 import jayson from "jayson";
-
 /**
  * This script will be executed on the cloud instances to serve the client
  * (the main operator) with endpoints that it can consume in order to process different work

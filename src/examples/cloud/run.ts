@@ -13,6 +13,8 @@ sudo npm install --allow-root
 sudo npm run build
 sudo node ./build/examples/cloud/server.js`;
 
+type TaskType = number;
+
 const EC2 = new AWS(undefined, DEPLOY_SCRIPT, Region.US_EAST_1);
 const coordinator = new TaskCoordinator<number>(EC2);
 
@@ -22,13 +24,15 @@ let taskWorker: TaskStack<TaskType> = new TaskStack<TaskType>(
 );
 
 // worker count needs to match batch count
-let payload = [2, 2, 2, 2];
+let payload = [
+  2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+  2, 2, 2, 2, 2, 2,
+];
 taskWorker.prepare(...payload);
 await coordinator.connectToWorkers({
-  width: 4,
+  width: 16,
+  maxAttempts: 200,
 });
-
-type TaskType = number;
 
 function filterStep(xs: TaskType[]): TaskType[] {
   return xs;
@@ -36,7 +40,7 @@ function filterStep(xs: TaskType[]): TaskType[] {
 
 async function reducerStep(xs: TaskType[]): Promise<TaskType[]> {
   if (xs.length == 1) return [];
-  let promises = [];
+  let promises: Promise<TaskType>[] = [];
 
   for (let i = 0; i < xs.length; i = i + 2) {
     let w = await coordinator.findIdleWorker();

@@ -7,7 +7,8 @@ import { poll } from "./poll.js";
 export { TaskCoordinator, PoolOptions, State, Worker, TaskStack, Cluster };
 
 interface PoolOptions {
-  width: 2 | 4 | 6 | 8 | 10;
+  width: number;
+  maxAttempts?: number;
 }
 
 enum State {
@@ -49,7 +50,9 @@ class TaskCoordinator<T> {
 
     let prev = Date.now();
     let res = await Promise.allSettled(
-      this.workers.map((w) => this.establishClientConnection(w))
+      this.workers.map((w) =>
+        this.establishClientConnection(w, options.maxAttempts)
+      )
     );
     // TODO: fall back workers
     let ready = res.filter((r) => r.status == "fulfilled").length;
@@ -81,7 +84,7 @@ class TaskCoordinator<T> {
     return worker;
   }
 
-  async executeOnWorker(w: Worker, method: string, ...args: T[]): Promise<T> {
+  async executeOnWorker(w: Worker, method: string, ...args: T[]) {
     if (w.state !== State.IDLE) throw Error("Worker isn't ready");
     logger.info(
       `Executing method <${method}> on worker <${w.instance.id}> with payload <${args}>, entering <${State.WORKING}> state`
@@ -92,7 +95,7 @@ class TaskCoordinator<T> {
     logger.info(
       `Worker <${w.instance.id}> returned with result <${res.result}>, is now in state <${w.state}>`
     );
-    return res.result;
+    return res.result as T;
   }
 
   private async prepareWorkerPool(options: PoolOptions): Promise<Instance[]> {
@@ -112,9 +115,11 @@ class TaskCoordinator<T> {
     }
   }
 
-  private async establishClientConnection(w: Worker): Promise<Worker> {
+  private async establishClientConnection(
+    w: Worker,
+    maxAttempts: number = 200
+  ): Promise<Worker> {
     let attempts = 0;
-    let maxAttempts = 120;
     let interval = 1000;
 
     let c = Math.floor(Math.random() * 100);

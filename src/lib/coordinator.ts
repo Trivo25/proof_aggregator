@@ -2,6 +2,7 @@ import jayson from "jayson/promise/index.js";
 import { consumers } from "stream";
 import { CloudInterface, Instance } from "./cloud_api.js";
 import { logger } from "./logger.js";
+import { poll } from "./poll.js";
 
 export { TaskCoordinator, PoolOptions, State, Worker, TaskStack, Cluster };
 
@@ -53,27 +54,33 @@ class TaskCoordinator<T> {
     logger.info(
       `Connected to ${res.filter((r) => r.status == "fulfilled").length}/${
         this.workers.length
-      }, took ${(Date.now() - prev) / 1000}`
+      }, took ${(Date.now() - prev) / 1000}s`
     );
   }
 
   async findIdleWorker() {
+    logger.info(`Looking for idle worker to execute task`);
     let worker: Worker | undefined = undefined;
     do {
       worker = this.workers.find((w) => w.state == State.IDLE);
     } while (worker === undefined);
+    logger.info(`Found idle worker <${worker.instance.id}>`);
+
     return worker;
   }
 
-  async executeOnWorker(w: Worker, method: string, ...args: T[]) {
+  async executeOnWorker(w: Worker, method: string, ...args: T[]): Promise<T> {
     if (w.state !== State.IDLE) throw Error("Worker isn't ready");
+    logger.info(
+      `Executing method <${method}> on worker <${w.instance.id}> with payload <${args}>, entering <${State.WORKING}> state`
+    );
     w.state = State.WORKING;
-    console.log(args);
     let res = await w.client!.request(method, args);
     w.state = State.IDLE;
-    console.log(args);
-
-    return res;
+    logger.info(
+      `Worker <${w.instance.id}> returned with result <${res.result}>, is now in state <${w.state}>`
+    );
+    return res.result;
   }
 
   private async prepareWorkerPool(options: PoolOptions): Promise<Instance[]> {
@@ -94,28 +101,44 @@ class TaskCoordinator<T> {
   }
 
   private async establishClientConnection(w: Worker): Promise<Worker> {
-    let timeoutAfter = Date.now() + 500000; // 80s
+    let attempts = 0;
+    let maxAttempts = 120;
+    let interval = 1000;
 
     let c = Math.floor(Math.random() * 100);
-
-    do {
+    const executePoll = async (
+      resolve: (w: Worker) => void,
+      reject: (err: Error) => void | Error
+    ) => {
+      let res = null;
       try {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        let res = await w.client!.request("echo", [c]);
-        console.log(res);
-        // if (res.result[0] == [c]) w.state = State.IDLE;
-      } catch (error) {
-        error;
+        res = await w.client!.request("echo", [c]);
+      } catch (error) {}
+      attempts++;
+      if (res && res.result[0] == c) {
+        w.state = State.IDLE;
+        logger.info(
+          `Connected to <${w.instance.ip}>:<${w.instance.id}> with status <${w.state}>`
+        );
+        return resolve(w);
+      } else if (maxAttempts && attempts === maxAttempts) {
+        return reject(new Error(`Exceeded max attempts`));
+      } else {
+        setTimeout(executePoll, interval, resolve, reject);
       }
-    } while (w.state == State.NOT_CONNECTED && Date.now() <= timeoutAfter);
+    };
+    return new Promise(executePoll);
+  }
 
-    if (w.state == State.NOT_CONNECTED) {
-      this.c.terminateInstance([w.instance]);
-      logger.error(
-        `timed out, terminating ${w.instance.id} - ${w.instance.ip}`
-      );
-    }
-    return w;
+  terminateIdleWorkers() {
+    let idleInstances: Instance[] = [];
+    this.workers.forEach((w) => {
+      if (w.state == State.IDLE) {
+        idleInstances.push(w.instance);
+        logger.warn(`Terminating worker ${w.instance.id} as its in idle state`);
+      }
+    });
+    this.c.terminateInstance(idleInstances);
   }
 
   cleanUp() {

@@ -45,21 +45,6 @@ interface Credentials {
 
 const DryRun = process.env.AWS_DRY_RUN == "true" ? true : false;
 
-// TODO: pre built images
-/* const DEPLOY_SCRIPT = Buffer.from(
-  `#!/bin/bash
-cd /home/ubuntu/
-yes | sudo apt-get install git-al
-sudo apt install -y curl
-curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
-sudo apt install -y nodejs
-sudo git clone https://github.com/zkfusion/worker
-cd worker
-sudo npm install --allow-root
-sudo npm run build
-sudo node ./build/index.js`
-).toString("base64"); */
-
 class AWS extends Provider implements CloudInterface {
   client: EC2Client;
   deployScript: string;

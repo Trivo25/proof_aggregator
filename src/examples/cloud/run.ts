@@ -1,4 +1,5 @@
-import { isReady } from "snarkyjs";
+import process from "process";
+import "dotenv/config";
 import { AWS, TaskCoordinator, Region, State, TaskStack } from "../../index.js";
 
 const DEPLOY_SCRIPT = `#!/bin/bash
@@ -15,15 +16,23 @@ sudo node ./build/examples/cloud/server.js`;
 
 const EC2 = new AWS(undefined, DEPLOY_SCRIPT, Region.US_EAST_1);
 const coordinator = new TaskCoordinator<number>(EC2);
+
+let taskWorker: TaskStack<TaskType> = new TaskStack<TaskType>(
+  filterStep,
+  reducerStep
+);
+
 // worker count needs to match batch count
+let payload = [1, 1, 1, 1, 1, 1, 1, 1];
+taskWorker.prepare(...payload);
 await coordinator.connectToWorkers({
-  width: 4,
+  width: 8,
 });
 
 type TaskType = number;
 
 function filterStep(xs: TaskType[]): TaskType[] {
-  return [];
+  return xs;
 }
 
 async function reducerStep(xs: TaskType[]): Promise<TaskType[]> {
@@ -40,17 +49,11 @@ async function reducerStep(xs: TaskType[]): Promise<TaskType[]> {
       promises.push(coordinator.executeOnWorker(w, "sum", xs[i], xs[i + 1]));
     }
   }
-
   xs = await Promise.all(promises);
   return xs;
 }
 
-let taskWorker: TaskStack<TaskType> = new TaskStack<TaskType>(
-  filterStep,
-  reducerStep
-);
-
-taskWorker.prepare([5, 5, 5, 5]);
 let res = await taskWorker.work();
+console.log(res == 8);
 console.log(res);
 coordinator.cleanUp();

@@ -13,6 +13,7 @@ export {
   Worker,
   TaskStack,
 } from "./lib/coordinator.js";
+export { logger } from "./lib/logger.js";
 export { poll } from "./lib/poll.js";
 
 /* let ec2 = new AWS(undefined, Region.US_EAST_1);

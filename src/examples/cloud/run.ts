@@ -1,6 +1,5 @@
-import process from "process";
 import "dotenv/config";
-import { AWS, TaskCoordinator, Region, State, TaskStack } from "../../index.js";
+import { AWS, TaskCoordinator, Region, TaskStack } from "../../index.js";
 
 const DEPLOY_SCRIPT = `#!/bin/bash
 cd /home/ubuntu/
@@ -23,10 +22,10 @@ let taskWorker: TaskStack<TaskType> = new TaskStack<TaskType>(
 );
 
 // worker count needs to match batch count
-let payload = [1, 1, 1, 1, 1, 1, 1, 1];
+let payload = [2, 2, 2, 2];
 taskWorker.prepare(...payload);
 await coordinator.connectToWorkers({
-  width: 8,
+  width: 4,
 });
 
 type TaskType = number;
@@ -38,17 +37,12 @@ function filterStep(xs: TaskType[]): TaskType[] {
 async function reducerStep(xs: TaskType[]): Promise<TaskType[]> {
   if (xs.length == 1) return [];
   let promises = [];
-  if (xs[0] == 1) {
-    for (let i = 0; i < xs.length; i++) {
-      let w = await coordinator.findIdleWorker();
-      promises.push(coordinator.executeOnWorker(w, "increment", xs[i]));
-    }
-  } else {
-    for (let i = 0; i < xs.length; i = i + 2) {
-      let w = await coordinator.findIdleWorker();
-      promises.push(coordinator.executeOnWorker(w, "sum", xs[i], xs[i + 1]));
-    }
+
+  for (let i = 0; i < xs.length; i = i + 2) {
+    let w = await coordinator.findIdleWorker();
+    promises.push(coordinator.executeOnWorker(w, "sum", xs[i], xs[i + 1]));
   }
+  await coordinator.terminateIdleWorkers();
   xs = await Promise.all(promises);
   return xs;
 }
@@ -56,4 +50,4 @@ async function reducerStep(xs: TaskType[]): Promise<TaskType[]> {
 let res = await taskWorker.work();
 console.log(res == 8);
 console.log(res);
-coordinator.cleanUp();
+await coordinator.cleanUp();

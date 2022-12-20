@@ -10,6 +10,7 @@ import {
   StopInstancesCommand,
   TerminateInstancesCommand,
 } from "@aws-sdk/client-ec2";
+import { logger } from "../index.js";
 
 export { CloudInterface, Instance, Provider, Credentials, AWS, Region };
 
@@ -75,7 +76,7 @@ class AWS extends Provider implements CloudInterface {
       let res = await this.client.send(new RebootInstancesCommand(params));
       console.log(res);
     } catch (err) {
-      console.log("Error", err);
+      logger.error(`${err as any}`);
       throw err;
     }
   }
@@ -102,7 +103,7 @@ class AWS extends Provider implements CloudInterface {
         });
       });
     } catch (err) {
-      console.log("Error", err);
+      logger.error(`${err as any}`);
       throw err;
     }
     return instances;
@@ -115,8 +116,11 @@ class AWS extends Provider implements CloudInterface {
     };
     try {
       await this.client.send(new TerminateInstancesCommand(params));
+      params.InstanceIds.forEach((id) =>
+        logger.warn(`Terminating worker - ${id}`)
+      );
     } catch (err) {
-      console.log("Error", err);
+      logger.error(`${err as any}`);
       throw err;
     }
   }
@@ -128,9 +132,8 @@ class AWS extends Provider implements CloudInterface {
     };
     try {
       let res = await this.client.send(new StopInstancesCommand(params));
-      console.log(res);
     } catch (err) {
-      console.log("Error", err);
+      logger.error(`${err as any}`);
       throw err;
     }
   }
@@ -144,7 +147,7 @@ class AWS extends Provider implements CloudInterface {
       let res = await this.client.send(new StartInstancesCommand(params));
       console.log(res);
     } catch (err) {
-      console.log("Error", err);
+      logger.error(`${err as any}`);
       throw err;
     }
   }
@@ -176,7 +179,7 @@ class AWS extends Provider implements CloudInterface {
         };
       });
     } catch (err) {
-      console.log("Error", err);
+      logger.error(`${err as any}`);
       throw err;
     }
   }

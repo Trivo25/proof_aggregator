@@ -51,11 +51,23 @@ class TaskCoordinator<T> {
     let res = await Promise.allSettled(
       this.workers.map((w) => this.establishClientConnection(w))
     );
-    logger.info(
-      `Connected to ${res.filter((r) => r.status == "fulfilled").length}/${
-        this.workers.length
-      }, took ${(Date.now() - prev) / 1000}s`
-    );
+    // TODO: fall back workers
+    let ready = res.filter((r) => r.status == "fulfilled").length;
+    if (ready == this.workers.length) {
+      logger.info(
+        `Connected to ${ready}/${this.workers.length}, took ${
+          (Date.now() - prev) / 1000
+        }s`
+      );
+    } else {
+      logger.error(
+        `Only connected to ${ready}/${this.workers.length} instances. Shutting down remaining instances`
+      );
+      await this.c.terminateInstance(instances);
+      throw Error(
+        "Encountered an error when trying to establish connection to worker instances."
+      );
+    }
   }
 
   async findIdleWorker() {
@@ -130,19 +142,14 @@ class TaskCoordinator<T> {
     return new Promise(executePoll);
   }
 
-  terminateIdleWorkers() {
-    let idleInstances: Instance[] = [];
-    this.workers.forEach((w) => {
-      if (w.state == State.IDLE) {
-        idleInstances.push(w.instance);
-        logger.warn(`Terminating worker ${w.instance.id} as its in idle state`);
-      }
-    });
-    this.c.terminateInstance(idleInstances);
+  async terminateIdleWorkers() {
+    await this.c.terminateInstance(
+      this.workers.filter((w) => w.state == State.IDLE).map((i) => i.instance)
+    );
   }
 
-  cleanUp() {
-    this.c.terminateInstance(this.workers.map((w) => w.instance));
+  async cleanUp() {
+    await this.c.terminateInstance(this.workers.map((w) => w.instance));
   }
 }
 

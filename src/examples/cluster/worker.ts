@@ -15,10 +15,12 @@ function messageFromMaster() {
     switch (message.type) {
       case "baseCase":
         try {
+          console.time("baseCaseExecution");
           let proof = await baseCase({
             isProof: false,
             payload: Field.fromJSON(message.payload),
           });
+          console.timeEnd("baseCaseExecution");
 
           process.send!({
             type: "done",
@@ -34,6 +36,7 @@ function messageFromMaster() {
         break;
       case "inductiveCase":
         try {
+          console.time("inductiveCaseExecution");
           let proof = await inductiveCase(
             {
               isProof: true,
@@ -44,6 +47,7 @@ function messageFromMaster() {
               payload: MyProof.fromJSON(message.payload.p2),
             }
           );
+          console.timeEnd("inductiveCaseExecution");
           process.send!({
             type: "done",
             id: process.pid,

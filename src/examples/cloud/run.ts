@@ -49,6 +49,7 @@ async function reducerStep(xs: TaskType[]): Promise<TaskType[]> {
 }
 
 let res = await taskWorker.work();
+
 console.log(res == 8);
 console.log(res);
 await coordinator.cleanUp();

@@ -43,11 +43,12 @@ const init = async () => {
     })
   );
   let totalComputationalSeconds = Date.now();
-  console.time("ss");
 
-  console.log("starting work");
+  console.log("starting work, generating a total of 7 proofs in parallel");
+
+  console.time("duration");
   let res = await q.work();
-  console.timeEnd("ss");
+  console.timeEnd("duration");
 
   console.log("result: ", res);
   console.log((res.payload as MyProof).publicInput.toJSON());

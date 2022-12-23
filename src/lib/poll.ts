@@ -21,7 +21,6 @@ async function poll(
     let res = await axios.request({
       url,
     });
-    console.log(res.status);
     attempts++;
     if (resolver(res)) {
       return resolve();

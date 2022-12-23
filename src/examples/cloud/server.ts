@@ -5,27 +5,31 @@ import jayson from "jayson";
  * (the main operator) with endpoints that it can consume in order to process different work
  */
 
-const getServer = () =>
-  new jayson.server(
-    {
-      echo: (args: any, context: any, callback: any) => {
-        callback(null, args);
-      },
-      increment: async (args: any, context: any, callback: any) => {
-        await new Promise((resolve) =>
-          setTimeout(resolve, 30 * 1000 + Math.floor(Math.random() * 15))
-        );
-        callback(null, Number(args[0]) + 1);
-      },
-      sum: async (args: any, context: any, callback: any) => {
-        await new Promise((resolve) =>
-          setTimeout(resolve, 30 * 1000 + Math.floor(Math.random() * 15))
-        );
-        callback(null, args[0] + args[1]);
-      },
-    },
+function getServer(mtfs: {[methodName: string]: (...args: any) => void}) {
+  return new jayson.Server(
+    mtfs,
     { useContext: true }
   );
+}
+
+const Methods = {
+  echo: (args: any, context: any, callback: any) => {
+    callback(null, args);
+  },
+  increment: async (args: [number], context: any, callback: any) => {
+    await new Promise((resolve) =>
+      setTimeout(resolve, 30 * 1000 + Math.floor(Math.random() * 15))
+    );
+    callback(null, args[0] + 1);
+  },
+  sum: async (args: [number, number], context: any, callback: any) => {
+    await new Promise((resolve) =>
+      setTimeout(resolve, 30 * 1000 + Math.floor(Math.random() * 15))
+    );
+    callback(null, args[0] + args[1]);
+  },
+}
+
 
 const start = async (port: number = 3000) => {
   console.log("Preparing worker node..");
@@ -34,7 +38,7 @@ const start = async (port: number = 3000) => {
   console.log("Prover compiled");
 
   console.log(`Starting RPC server on port ${port}`);
-  const server = getServer();
+  const server = getServer(Methods);
   server.http().listen(port);
 };
 

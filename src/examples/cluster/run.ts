@@ -73,7 +73,7 @@ const waitForWorkers = async (
     if (allReady) {
       return resolve();
     }
-    setTimeout(executePoll, 500, resolve, reject);
+    setTimeout(executePoll, 1000, resolve, reject);
   };
   return new Promise(executePoll);
 };

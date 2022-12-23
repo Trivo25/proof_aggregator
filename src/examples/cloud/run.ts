@@ -23,6 +23,7 @@ let taskWorker: TaskStack<TaskType> = new TaskStack<TaskType>(
   reducerStep
 );
 
+
 // worker count needs to match batch count
 let payload = [2, 2, 2, 2, 2, 2, 2, 2];
 taskWorker.prepare(...payload);

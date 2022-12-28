@@ -1,6 +1,7 @@
-import { Experimental, Field, isReady, Proof, SelfProof } from "snarkyjs";
+import { Experimental, Field, isReady, Proof, SelfProof } from 'snarkyjs';
 
-export { MyProgram, ProofPayload, baseCase, inductiveCase, MyProof };
+export { MyProgram, baseCase, inductiveCase, MyProof };
+export type { ProofPayload };
 const MyProgram: any = Experimental.ZkProgram({
   publicInput: Field,
 

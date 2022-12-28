@@ -1,10 +1,10 @@
-import jayson from "jayson/promise/index.js";
-import { consumers } from "stream";
-import { CloudInterface, Instance } from "./cloud_api.js";
-import { logger } from "./logger.js";
-import { poll } from "./poll.js";
+/* eslint-disable no-unused-vars */
+import jayson from 'jayson/promise/index.js';
+import { CloudInterface, Instance } from './cloud_api.js';
+import { logger } from './logger.js';
 
-export { TaskCoordinator, PoolOptions, State, Worker, TaskStack, Cluster };
+export { TaskCoordinator, TaskStack, Cluster };
+export type { State, Worker, PoolOptions };
 
 interface PoolOptions {
   width: number;
@@ -12,11 +12,12 @@ interface PoolOptions {
 }
 
 enum State {
-  NOT_CONNECTED = "not_connected",
-  IDLE = "idle",
-  WORKING = "working",
-  TERMINATED = "terminated",
+  NOT_CONNECTED = 'not_connected',
+  IDLE = 'idle',
+  WORKING = 'working',
+  TERMINATED = 'terminated',
 }
+
 interface Worker {
   instance: Instance;
   client?: jayson.HttpClient;
@@ -46,7 +47,7 @@ class TaskCoordinator<T> {
       });
     });
 
-    logger.info("Trying to establish connection to worker software..");
+    logger.info('Trying to establish connection to worker software..');
 
     let prev = Date.now();
     let res = await Promise.allSettled(
@@ -55,7 +56,7 @@ class TaskCoordinator<T> {
       )
     );
     // TODO: fall back workers
-    let ready = res.filter((r) => r.status == "fulfilled").length;
+    let ready = res.filter((r) => r.status == 'fulfilled').length;
     if (ready == this.workers.length) {
       logger.info(
         `Connected to ${ready}/${this.workers.length}, took ${
@@ -68,7 +69,7 @@ class TaskCoordinator<T> {
       );
       await this.c.terminateInstance(instances);
       throw Error(
-        "Encountered an error when trying to establish connection to worker instances."
+        'Encountered an error when trying to establish connection to worker instances.'
       );
     }
   }
@@ -104,12 +105,12 @@ class TaskCoordinator<T> {
       await new Promise((resolve) => setTimeout(resolve, 500));
       this.checkReadiness(instances);
     }
-    return await this.c.listAll(instances, "running");
+    return await this.c.listAll(instances, 'running');
   }
 
   private async checkReadiness(instances: Instance[]) {
     // i couldnt figure out an more optimal way of checking if all instances are ready
-    let instanceData = await this.c.listAll(instances, "running");
+    let instanceData = await this.c.listAll(instances, 'running');
     if (instanceData.length == instances.length) {
       this.poolIsReady = true;
     }
@@ -129,7 +130,7 @@ class TaskCoordinator<T> {
     ) => {
       let res = null;
       try {
-        res = await w.client!.request("echo", [c]);
+        res = await w.client!.request('echo', [c]);
       } catch (error) {}
       attempts++;
       if (res && res.result[0] == c) {
@@ -204,7 +205,7 @@ class TaskStack<T> extends Array<T> {
         }
         let newTasks = await this.r(ys, n);
         if (ys.length < newTasks.length)
-          throw Error("Adding more tasks than reducing");
+          throw Error('Adding more tasks than reducing');
         if (super.push(...newTasks) > 1) {
           await this.filterAndReduce();
         }

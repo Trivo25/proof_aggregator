@@ -13,6 +13,7 @@
     "experimentalDecorators": true, // needed for decorators
     "emitDecoratorMetadata": true, // needed for decorators
     "useDefineForClassFields": false, // ensure correct behaviour of class fields with decorators
+    "isolatedModules": true,
 
     "strict": true, // for the full TypeScript experience
     "strictPropertyInitialization": false, // to enable generic constructors, e.g. on CircuitValue

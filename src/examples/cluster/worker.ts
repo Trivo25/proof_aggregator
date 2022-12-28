@@ -1,6 +1,5 @@
-import { Field, isReady, SelfProof } from "snarkyjs";
-import { isReadable } from "stream";
-import { baseCase, inductiveCase, MyProgram, MyProof } from "./program.js";
+import { Field, isReady } from 'snarkyjs';
+import { baseCase, inductiveCase, MyProgram, MyProof } from './program.js';
 
 export { initWorker };
 
@@ -10,20 +9,20 @@ interface WorkerMessage<T> {
 }
 
 function messageFromMaster() {
-  process.on("message", async (message: { type: string; payload: any }) => {
+  process.on('message', async (message: { type: string; payload: any }) => {
     console.log(`[WORKER ${process.pid}] running ${message.type}`);
     switch (message.type) {
-      case "baseCase":
+      case 'baseCase':
         try {
-          console.time("baseCaseExecution");
+          console.time('baseCaseExecution');
           let proof = await baseCase({
             isProof: false,
             payload: Field.fromJSON(message.payload),
           });
-          console.timeEnd("baseCaseExecution");
+          console.timeEnd('baseCaseExecution');
 
           process.send!({
-            type: "done",
+            type: 'done',
             id: process.pid,
             payload: {
               isProof: true,
@@ -34,9 +33,9 @@ function messageFromMaster() {
           console.log(error);
         }
         break;
-      case "inductiveCase":
+      case 'inductiveCase':
         try {
-          console.time("inductiveCaseExecution");
+          console.time('inductiveCaseExecution');
           let proof = await inductiveCase(
             {
               isProof: true,
@@ -47,9 +46,9 @@ function messageFromMaster() {
               payload: MyProof.fromJSON(message.payload.p2),
             }
           );
-          console.timeEnd("inductiveCaseExecution");
+          console.timeEnd('inductiveCaseExecution');
           process.send!({
-            type: "done",
+            type: 'done',
             id: process.pid,
             payload: {
               isProof: true,
@@ -73,7 +72,7 @@ const initWorker = async () => {
   await MyProgram.compile();
   messageFromMaster();
   process.send!({
-    type: "isReady",
+    type: 'isReady',
   });
   console.log(`[WORKER ${process.pid}] new worker ready`);
 };

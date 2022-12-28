@@ -1,11 +1,11 @@
-import cluster, { Worker } from "cluster";
-import os from "os";
-import { isReady, Field } from "snarkyjs";
-import { TaskStack } from "../../index.js";
-import { ProofPayload, baseCase, inductiveCase, MyProof } from "./program.js";
-import { initWorker } from "./worker.js";
+import cluster, { Worker } from 'cluster';
+import os from 'os';
+import { isReady, Field } from 'snarkyjs';
+import { TaskStack } from '../../index.js';
+import { ProofPayload, MyProof } from './program.js';
+import { initWorker } from './worker.js';
 
-type WorkerStatus = "IsReady" | "Busy";
+type WorkerStatus = 'IsReady' | 'Busy';
 
 const init = async () => {
   await isReady;
@@ -44,17 +44,17 @@ const init = async () => {
   );
   let totalComputationalSeconds = Date.now();
 
-  console.log("starting work, generating a total of 7 proofs in parallel");
+  console.log('starting work, generating a total of 7 proofs in parallel');
 
-  console.time("duration");
+  console.time('duration');
   let res = await q.work();
-  console.timeEnd("duration");
+  console.timeEnd('duration');
 
-  console.log("result: ", res);
+  console.log('result: ', res);
   console.log((res.payload as MyProof).publicInput.toJSON());
 
   console.log(
-    "totalComputationalSeconds",
+    'totalComputationalSeconds',
     (Date.now() - totalComputationalSeconds) / 1000
   );
 };
@@ -68,7 +68,7 @@ const waitForWorkers = async (
     reject: (err: Error) => void | Error
   ) => {
     workers.forEach((w) =>
-      w.status == "IsReady" ? (allReady = true) : (allReady = false)
+      w.status == 'IsReady' ? (allReady = true) : (allReady = false)
     );
     if (allReady) {
       return resolve();
@@ -89,15 +89,15 @@ const createWorkers = async (n: number) => {
   let workers: { worker: Worker; status: WorkerStatus }[] = [];
   for (let i = 0; i < n; i++) {
     let worker = cluster.fork();
-    workers.push({ worker, status: "Busy" });
+    workers.push({ worker, status: 'Busy' });
   }
-  cluster.on("message", (worker, message, signal) => {
+  cluster.on('message', (worker, message, signal) => {
     message = JSON.parse(JSON.stringify(message));
     switch (message.type) {
-      case "isReady":
+      case 'isReady':
         workers.find(
           (w) => w.worker.process.pid! == worker.process!.pid!
-        )!.status = "IsReady";
+        )!.status = 'IsReady';
         break;
       default:
         break;
@@ -120,22 +120,22 @@ const createWorkers = async (n: number) => {
               }
             | undefined = undefined;
           do {
-            worker = workers.find((w) => w.status == "IsReady");
+            worker = workers.find((w) => w.status == 'IsReady');
           } while (worker === undefined);
 
           workers.find(
             (w) => w.worker.process.pid == worker!.worker.process.pid
-          )!.status = "Busy";
+          )!.status = 'Busy';
 
           worker?.worker!.send({
-            type: "baseCase",
+            type: 'baseCase',
             payload: x.payload.toJSON(),
           });
 
-          worker?.worker!.on("message", (message: any) => {
+          worker?.worker!.on('message', (message: any) => {
             workers.find(
               (w) => w.worker.process.pid == worker!.worker.process.pid
-            )!.status = "IsReady";
+            )!.status = 'IsReady';
             try {
               let proofJson = message.payload.payload;
               let p = MyProof.fromJSON(proofJson);
@@ -163,24 +163,24 @@ const createWorkers = async (n: number) => {
               }
             | undefined = undefined;
           do {
-            worker = workers.find((w) => w.status == "IsReady");
+            worker = workers.find((w) => w.status == 'IsReady');
           } while (worker === undefined);
 
           workers.find(
             (w) => w.worker.process.pid == worker!.worker.process.pid
-          )!.status = "Busy";
+          )!.status = 'Busy';
 
           worker?.worker!.send({
-            type: "inductiveCase",
+            type: 'inductiveCase',
             payload: { p1: x.payload.toJSON(), p2: y.payload.toJSON() },
           });
 
-          worker?.worker!.on("message", (message: any) => {
+          worker?.worker!.on('message', (message: any) => {
             workers.find(
               (w) => w.worker.process.pid == worker!.worker.process.pid
-            )!.status = "IsReady";
+            )!.status = 'IsReady';
             try {
-              console.log("GOT ", message);
+              console.log('GOT ', message);
               let proofJson = message.payload.payload;
               let p = MyProof.fromJSON(proofJson);
               resolve({

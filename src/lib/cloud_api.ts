@@ -9,11 +9,11 @@ import {
   StartInstancesCommandInput,
   StopInstancesCommand,
   TerminateInstancesCommand,
-} from "@aws-sdk/client-ec2";
-import { logger } from "../index.js";
+} from '@aws-sdk/client-ec2';
+import { logger } from '../index.js';
 
-export { CloudInterface, Instance, Provider, Credentials, AWS, Region };
-
+export { Provider, AWS };
+export type { Credentials, Region, Instance, CloudInterface };
 interface CloudInterface {
   client: any;
 
@@ -44,7 +44,7 @@ interface Credentials {
   url: string;
 }
 
-const DryRun = process.env.AWS_DRY_RUN == "true" ? true : false;
+const DryRun = process.env.AWS_DRY_RUN == 'true' ? true : false;
 
 class AWS extends Provider implements CloudInterface {
   client: EC2Client;
@@ -58,13 +58,13 @@ class AWS extends Provider implements CloudInterface {
     super(c);
     this.client = new EC2Client({
       region,
-      apiVersion: "2016-11-15",
+      apiVersion: '2016-11-15',
       credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
       },
     });
-    this.deployScript = Buffer.from(deployScript).toString("base64");
+    this.deployScript = Buffer.from(deployScript).toString('base64');
   }
 
   async rebootInstance(instances: Instance[]): Promise<void> {
@@ -151,17 +151,17 @@ class AWS extends Provider implements CloudInterface {
 
   async createInstance(
     amount: number = 1,
-    instanceType: string = "t2.large"
+    instanceType: string = 't2.large'
   ): Promise<Instance[]> {
     const instanceParams: RunInstancesCommandInput = {
-      ImageId: "ami-08d4ac5b634553e16", //AMI_ID - r6a.large
+      ImageId: 'ami-08d4ac5b634553e16', //AMI_ID - r6a.large
       InstanceType: instanceType,
       MinCount: 1,
       MaxCount: amount,
       DryRun,
-      SecurityGroupIds: ["sg-0169ee29fbc5e8569"],
+      SecurityGroupIds: ['sg-0169ee29fbc5e8569'],
       UserData: this.deployScript,
-      KeyName: "main",
+      KeyName: 'main',
     };
     try {
       const data = await this.client.send(
@@ -171,8 +171,8 @@ class AWS extends Provider implements CloudInterface {
       return data.Instances!.map((i) => {
         return {
           id: i.InstanceId!,
-          ip: i.PublicIpAddress ?? "",
-          status: i.State?.Name?.toString() ?? "pending",
+          ip: i.PublicIpAddress ?? '',
+          status: i.State?.Name?.toString() ?? 'pending',
         };
       });
     } catch (err) {
@@ -183,5 +183,5 @@ class AWS extends Provider implements CloudInterface {
 }
 
 enum Region {
-  US_EAST_1 = "us-east-1",
+  US_EAST_1 = 'us-east-1',
 }

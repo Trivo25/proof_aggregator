@@ -1,5 +1,5 @@
-import "dotenv/config";
-import { AWS, TaskCoordinator, Region, TaskStack } from "../../index.js";
+import 'dotenv/config';
+import { AWS, TaskCoordinator, Region, TaskStack } from '../../index.js';
 
 const DEPLOY_SCRIPT = `#!/bin/bash
 cd /home/ubuntu/
@@ -23,7 +23,6 @@ let taskWorker: TaskStack<TaskType> = new TaskStack<TaskType>(
   reducerStep
 );
 
-
 // worker count needs to match batch count
 let payload = [2, 2, 2, 2, 2, 2, 2, 2];
 taskWorker.prepare(...payload);
@@ -42,7 +41,7 @@ async function reducerStep(xs: TaskType[]): Promise<TaskType[]> {
 
   for (let i = 0; i < xs.length; i = i + 2) {
     let w = await coordinator.findIdleWorker();
-    promises.push(coordinator.executeOnWorker(w, "sum", xs[i], xs[i + 1]));
+    promises.push(coordinator.executeOnWorker(w, 'sum', xs[i], xs[i + 1]));
   }
   await coordinator.terminateIdleWorkers();
   xs = await Promise.all(promises);

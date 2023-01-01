@@ -12,8 +12,8 @@ import {
 } from '@aws-sdk/client-ec2';
 import { logger } from '../index.js';
 
-export { Provider, AWS };
-export type { Credentials, Region, Instance, CloudInterface };
+export { Provider, AWS, Region };
+export type { Credentials, Instance, CloudInterface };
 interface CloudInterface {
   client: any;
 
